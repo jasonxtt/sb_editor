@@ -1,0 +1,42 @@
+name: Build and Release
+
+# 触发条件：当你推送以 'v' 开头的标签时 (例如 v1.0.0)
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # 给予创建 Release 的权限
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest # 使用最新的 Ubuntu 环境
+
+    steps:
+      # 1. 下载你的代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. 配置 Go 环境
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable' # 使用最新的稳定版 Go
+
+      # 3. 编译代码 (Linux x64)
+      - name: Build Linux Binary
+        # 注意：将下面的 'my-app' 改成你想要的程序名字
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o sb_editor .
+          
+      # 4. 创建 Release 并上传文件
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          # 注意：这里的 'my-app' 必须和上面编译生成的文件名一致
+          files: sb_editor
+          generate_release_notes: true # 自动生成更新日志
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
