@@ -4,535 +4,555 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sing-box 配置编辑器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
     <style>
         :root {
-            --editor-height-ratio: 0.66; /* 编辑器占据屏幕高的2/3 */
-            --column-gap: 15px;
-            --func-button-min-width: 100px; /* 功能按钮最小宽度 */
-            --hierarchy-max-width-ratio: 0.2; /* 配置层级最大宽度占总宽的1/5 */
-
-            /* 移动端特定变量 */
-            --mobile-editor-height-ratio: 0.45; /* 移动端编辑器占据屏幕高的约一半 */
+            /* 浅色主题变量 */
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --primary-color: #4f46e5; /* Indigo */
+            --primary-hover: #4338ca;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --success-color: #10b981;
+            --code-bg: #f8fafc;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --radius: 8px;
+            --header-height: 60px;
         }
+
+        /* 深色主题变量 */
+        [data-theme="dark"] {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --primary-color: #6366f1;
+            --primary-hover: #818cf8;
+            --code-bg: #020617; /* 更深的代码背景 */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+        }
+
+        * { box-sizing: border-box; }
 
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
             margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4;
-            color: #333;
+            padding: 0;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden; /* 防止整个页面滚动 */
+            transition: background-color 0.3s, color 0.3s;
         }
+
+        /* 顶部导航栏 */
+        header {
+            height: var(--header-height);
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: var(--shadow-sm);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
         h1 {
-            color: #0056b3;
-            text-align: center;
-            margin-bottom: 10px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* 顶部右侧工具栏 */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        /* 提示框样式 */
-        .toast-notification {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-            pointer-events: none; /* 允许点击穿透 */
-        }
-        .toast-notification.show {
-            opacity: 1;
-        }
-        .toast-notification.success {
-            background-color: rgba(40, 167, 69, 0.8);
-        }
-        .toast-notification.error {
-            background-color: rgba(220, 53, 69, 0.8);
+        /* 主题切换按钮 */
+        .theme-toggle {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
         }
 
-        /* 配置路径选择器容器 */
+        /* 主容器 */
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden; /* 内部滚动 */
+        }
+
+        /* 路径选择器面板 */
         #config-path-selector-container {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background-color: var(--bg-card);
+            padding: 40px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
             max-width: 600px;
-            margin: 50px auto;
+            margin: auto;
             text-align: center;
             display: flex;
             flex-direction: column;
             gap: 15px;
+            border: 1px solid var(--border-color);
         }
-        #config-path-selector-container h2 {
-            color: #007bff;
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
-        #config-path-select, #manual-path-input {
+        
+        input[type="text"], select {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            background-color: #f9f9f9;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--code-bg);
+            color: var(--text-main);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
         }
-        #set-path-button {
-            padding: 10px 20px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.3s ease;
-            width: 100%;
-        }
-        #set-path-button:hover {
-            background-color: #218838;
-        }
-        .current-active-path-info {
-            margin-top: 15px;
-            font-size: 0.9em;
-            color: #666;
-        }
-        .config-path-message {
-            color: #dc3545;
-            margin-top: 10px;
+        
+        input[type="text"]:focus, select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
         }
 
-        /* 主编辑器容器 */
+        /* 编辑器主区域 (三列布局) */
         #main-editor-container {
-            flex-grow: 1;
             display: flex;
-            gap: var(--column-gap);
-            height: calc(100vh * var(--editor-height-ratio));
-            align-items: stretch;
+            gap: 15px;
+            flex-grow: 1;
+            min-height: 0; /* 允许 Flex 子项滚动 */
         }
 
-        /* 第一列：功能按钮区 - 竖向排列 */
-        .functional-buttons-column {
-            background-color: #e9ecef;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        /* 通用列样式 */
+        .editor-column {
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .column-header {
+            padding: 12px 15px;
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 第一列：文件列表 */
+        .functional-buttons-column {
+            width: 180px;
             flex-shrink: 0;
             overflow-y: auto;
-        }
-        .functional-buttons-column button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            border: none;
-            font-size: 0.95rem;
-            text-align: center;
-            transition: background-color 0.3s ease, transform 0.1s ease;
-            word-break: break-all;
-            white-space: normal;
-        }
-        .functional-buttons-column button:hover {
-            background-color: #0056b3;
-            transform: translateY(-1px);
-        }
-        .functional-buttons-column button.active {
-            background-color: #28a745;
-            box-shadow: 0 0 0 2px #28a745, 0 0 0 4px rgba(40, 167, 69, 0.5);
-        }
-        .functional-buttons-column .message {
-            text-align: left;
-            font-size: 0.8em;
-            color: #666;
-        }
-
-        /* 第二、三、四列的共同样式 */
-        .editor-column {
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 10px;
+            gap: 5px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            min-width: 0;
         }
-        .editor-column h2 {
-            color: #555;
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
+
+        /* 侧边栏按钮样式 */
+        .config-type-button {
+            background: transparent;
+            color: var(--text-main);
+            border: none;
+            padding: 10px 12px;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .config-type-button:hover {
+            background-color: var(--bg-body);
+            color: var(--primary-color);
+        }
+
+        .config-type-button.active {
+            background-color: rgba(99, 102, 241, 0.1); /* Primary color low opacity */
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .config-type-button.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 60%;
+            width: 3px;
+            background-color: var(--primary-color);
+            border-radius: 0 2px 2px 0;
+        }
+
+        /* 第二列：Key 列表 */
+        .hierarchy-selector {
+            width: 220px;
             flex-shrink: 0;
         }
 
-        /* 第二列：层级选择器 */
-        .hierarchy-selector {
-            flex-grow: 0;
-            flex-shrink: 0;
-            overflow-x: auto;
-        }
-        .hierarchy-selector ul {
-            list-style-type: none;
+        #hierarchy-list {
+            list-style: none;
             padding: 0;
             margin: 0;
             overflow-y: auto;
             flex-grow: 1;
         }
-        .hierarchy-selector li {
-            padding: 8px 10px;
+
+        #hierarchy-list li {
+            padding: 8px 15px;
             cursor: pointer;
-            border-bottom: 1px solid #eee;
-            transition: background-color 0.2s ease;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            white-space: normal;
-            word-break: break-all;
-        }
-        .hierarchy-selector li:last-child {
-            border-bottom: none;
-        }
-        .hierarchy-selector li:hover {
-            background-color: #e0f2f7;
-        }
-        .hierarchy-selector li.active {
-            background-color: #cceeff;
-            font-weight: bold;
-            color: #0056b3;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-muted);
+            transition: background 0.2s;
         }
 
-        /* 第三、四列 (片段编辑器, 完整配置编辑器) 平分剩余宽度 */
+        #hierarchy-list li:hover {
+            background-color: var(--bg-body);
+            color: var(--primary-color);
+        }
+
+        #hierarchy-list li.active {
+            background-color: var(--bg-body);
+            color: var(--primary-color);
+            font-weight: 600;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        /* 编辑器区域 (Textarea) */
         .fragment-editor, .full-config-editor {
             flex-grow: 1;
             flex-basis: 0;
+            min-width: 0; /* 防止内容撑开 */
         }
-
-        /* 第三、四列的 textarea */
+        
         textarea {
             width: 100%;
-            height: 100%; /* 占据父容器剩余高度 */
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 0.9em;
-            box-sizing: border-box;
-            resize: vertical;
-            font-family: 'Courier New', monospace;
-            background-color: #fdfdfd;
-        }
-        textarea:focus {
+            height: 100%;
+            padding: 15px;
+            border: none;
+            resize: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            background-color: var(--code-bg);
+            color: var(--text-main);
             outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        
+        textarea::placeholder {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+        
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        [data-theme="dark"] ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
 
-        /* 全局保存和重启按钮容器，放在三列之外 */
+        /* 底部操作栏 */
         #global-action-buttons {
             display: flex;
-            gap: 10px;
+            gap: 15px;
             justify-content: flex-end;
-            margin-top: 20px;
+            padding-top: 10px;
+            flex-shrink: 0;
         }
-        #global-action-buttons button {
-            padding: 10px 15px;
+
+        button.btn-primary, button.btn-warning, button.btn-action {
+            padding: 10px 20px;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 0.95rem;
-            transition: background-color 0.3s ease;
-            white-space: nowrap;
+            font-weight: 500;
+            transition: transform 0.1s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
-        #save-config-button {
-            background-color: #28a745;
+        
+        button.btn-primary {
+            background-color: var(--primary-color);
             color: white;
         }
-        #save-config-button:hover {
-            background-color: #218838;
+        button.btn-primary:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        #save-and-restart-button {
-            background-color: #dc3545;
+        
+        button.btn-warning {
+            background-color: var(--warning-color);
+            color: #1e293b; /* Dark text for contrast */
+        }
+        button.btn-warning:hover:not(:disabled) {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        button.btn-action {
+            background-color: var(--success-color);
             color: white;
         }
-        #save-and-restart-button:hover {
-            background-color: #c82333;
-        }
+        
         button:disabled {
-            background-color: #cccccc !important;
-            cursor: not-allowed !important;
-            transform: none !important;
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(0.5);
         }
 
-        /* 底部信息 */
-        .footer {
-            margin-top: auto;
-            text-align: center;
-            color: #888;
-            font-size: 0.9em;
+        /* Toast 提示 */
+        .toast-notification {
+            position: fixed;
+            top: 80px; /* 改为顶部显示 */
+            right: 20px;
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            padding: 15px 20px;
+            border-radius: 8px;
+            border-left: 5px solid var(--primary-color);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 2000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            font-weight: 500;
         }
-        .message {
-            text-align: center;
-            color: #666;
-            font-style: italic;
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateX(0);
         }
+        .toast-notification.success { border-left-color: var(--success-color); }
+        .toast-notification.error { border-left-color: var(--danger-color); }
 
-        /* 响应式调整 */
-        /* 大屏幕 (>= 1200px 默认四列布局，完整配置编辑器显示) */
-        @media (min-width: 1200px) {
-            #main-editor-container {
-                display: flex; /* 确保是 flex 布局 */
-                flex-wrap: nowrap; /* 不换行 */
-            }
-            .full-config-editor {
-                display: flex; /* 默认显示 */
-            }
-        }
-
-        /* 中等屏幕 (900px to 1199px - 隐藏完整配置编辑器，变为三列) */
-        @media (max-width: 1199px) and (min-width: 900px) {
-            #main-editor-container {
-                display: grid; /* 使用 Grid 布局更方便控制列 */
-                grid-template-columns: var(--calculated-func-btn-width, 150px) var(--calculated-hierarchy-width, 200px) 1fr;
-                gap: var(--column-gap);
-            }
-            .full-config-editor {
-                display: none; /* 隐藏完整配置编辑器 */
-            }
-        }
-
-        /* 移动端 (<= 899px - 垂直堆叠，功能按钮横向排列，编辑器高度调整) */
-        @media (max-width: 899px) {
-            #main-editor-container {
-                flex-direction: column; /* 垂直堆叠 */
-                height: auto; /* 高度自适应 */
-            }
-            .functional-buttons-column {
-                width: 100%; /* 占满宽度 */
-                flex-direction: row; /* 功能按钮横向排列 */
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            .functional-buttons-column button {
-                width: auto; /* 按钮宽度自适应内容 */
-                flex-grow: 1; /* 按钮在行内平分空间 */
-            }
-            .editor-column {
-                min-height: 200px; /* 确保每列有可见高度 */
-                height: calc(100vh * var(--mobile-editor-height-ratio)); /* 调整编辑器高度 */
-                overflow: hidden; /* 隐藏超出内容 */
-            }
-            .hierarchy-selector {
-                width: 100%;
-                flex-grow: 1;
-            }
-            .fragment-editor, .full-config-editor {
-                width: 100%;
-                flex-grow: 1;
-                flex-basis: auto;
-            }
-            .full-config-editor {
-                display: flex; /* 在移动端重新显示完整配置编辑器，但位置在最下方 */
-            }
-            #global-action-buttons {
-                flex-direction: column; /* 按钮垂直堆叠 */
-                align-items: stretch; /* 按钮宽度100% */
-            }
-            #global-action-buttons button {
-                width: 100%;
-            }
-        }
-
-        /* 模态框样式 */
+        /* 模态框美化 */
         .modal {
-            display: none; /* 默认隐藏 */
-            position: fixed; /* 固定定位 */
-            z-index: 1001; /* 确保在最上层 */
+            display: none;
+            position: fixed;
+            z-index: 3000;
             left: 0;
             top: 0;
-            width: 100%; /* 全屏 */
-            height: 100%; /* 全屏 */
-            overflow: auto; /* 允许滚动 */
-            background-color: rgba(0,0,0,0.4); /* 半透明背景 */
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
             justify-content: center;
             align-items: center;
         }
-
-        .modal.show {
-            display: flex;
-        }
+        .modal.show { display: flex; }
 
         .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #888;
-            border-radius: 8px;
-            width: 80%; /* 模态框宽度 */
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
             max-width: 500px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+            animation: modalFadeIn 0.3s ease;
         }
 
-        .close-button {
-            color: #aaa;
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
 
-        .close-button:hover,
-        .close-button:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        #modal-title {
-            color: #007bff;
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 1.2em;
-        }
-
+        .modal h3 { margin-top: 0; font-size: 1.5rem; }
+        .modal h3.error { color: var(--danger-color); }
+        .modal-actions { margin-top: 25px; text-align: right; }
+        .close-button { float: right; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
+        .close-button:hover { color: var(--text-main); }
+        
         #modal-message {
-            white-space: pre-wrap; /* 保留换行符 */
-            font-size: 0.95em;
-            color: #555;
-            max-height: 300px; /* 限制高度，允许滚动 */
+            white-space: pre-wrap;
+            background-color: var(--code-bg);
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            max-height: 250px;
             overflow-y: auto;
-            padding-right: 5px; /* 防止滚动条遮挡文字 */
+            border: 1px solid var(--border-color);
         }
 
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .modal-button {
-            padding: 8px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: background-color 0.3s ease;
-        }
-
-        .modal-button.confirm {
-            background-color: #007bff;
-            color: white;
-        }
-
-        .modal-button.confirm:hover {
-            background-color: #0056b3;
-        }
-
-        /* 错误消息的特殊样式 */
-        #modal-title.error {
-            color: #dc3545;
-        }
-        #modal-message.error {
-            color: #dc3545;
-            font-weight: bold;
-        }
-
-        @media (max-width: 899px) {
-            .modal-content {
-                width: 95%;
-            }
+        /* 移动端适配 */
+        @media (max-width: 900px) {
+            #main-editor-container { flex-direction: column; overflow-y: auto; }
+            .functional-buttons-column, .hierarchy-selector { width: 100%; height: auto; max-height: 200px; }
+            .editor-column { height: 300px; flex-shrink: 0; }
+            #global-action-buttons { flex-direction: column; }
+            button { width: 100%; justify-content: center; }
         }
     </style>
 </head>
 <body>
-    <h1>Sing-box 配置编辑器</h1>
 
-    <!-- 统一提示框 (Toast Notification) -->
+    <header>
+        <h1>⚡ Sing-box Editor</h1>
+        <div class="header-actions">
+            <button class="theme-toggle" id="theme-toggle" title="切换深色/浅色主题">🌓</button>
+        </div>
+    </header>
+
     <div id="toast-notification" class="toast-notification"></div>
 
-    <!-- 自定义模态框 (用于需要用户确认的错误/信息) -->
     <div id="notification-modal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
-            <h3 id="modal-title"></h3>
-            <p id="modal-message"></p>
+            <h3 id="modal-title">标题</h3>
+            <div id="modal-message">消息内容</div>
             <div class="modal-actions">
-                <button id="modal-confirm-button" class="modal-button confirm">确定</button>
+                <button id="modal-confirm-button" class="btn-primary">确定</button>
             </div>
         </div>
     </div>
 
-    <!-- 配置路径选择器容器 -->
-    <div id="config-path-selector-container">
-        <h2>选择 Sing-box 配置目录</h2>
-        <p>系统已检测到以下可用路径:</p>
-        <select id="config-path-select">
-            <option value="" disabled selected>-- 正在加载可用路径 --</option>
-            <!-- 动态加载路径选项 -->
-        </select>
-        <p>或手动输入:</p>
-        <input type="text" id="manual-path-input" placeholder="/path/to/sing-box/conf/">
-        <button id="set-path-button">设置此路径</button>
-        <div class="current-active-path-info">当前活动路径: <span id="current-active-path-display">未设置</span></div>
-        <p id="config-path-message" class="config-path-message"></p>
-    </div>
+    <div id="app-container">
+        
+        <div id="config-path-selector-container">
+            <h2 style="color: var(--primary-color);">配置目录设置</h2>
+            <p style="color: var(--text-muted);">请选择 Sing-box 配置文件所在的文件夹</p>
+            
+            <select id="config-path-select">
+                <option value="" disabled selected>正在扫描路径...</option>
+            </select>
+            
+            <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                <span style="flex-shrink: 0; font-size: 0.9em; color: var(--text-muted);">或手动:</span>
+                <input type="text" id="manual-path-input" placeholder="/etc/sing-box/">
+            </div>
 
-    <!-- 主编辑器容器 (初始隐藏) -->
-    <div id="main-editor-container" style="display: none;">
-        <!-- 第一列：功能按钮区 - 竖向排列 -->
-        <div class="functional-buttons-column" id="functional-buttons-column">
-            <p class="message">请设置配置目录后加载功能按钮...</p>
+            <button id="set-path-button" class="btn-primary" style="width: 100%;">确定设置</button>
+            
+            <div style="font-size: 0.85em; color: var(--text-muted); margin-top: 10px;">
+                当前路径: <span id="current-active-path-display" style="font-family: monospace; color: var(--primary-color);">未设置</span>
+            </div>
+            <p id="config-path-message" style="color: var(--danger-color); font-size: 0.9em;"></p>
         </div>
 
-        <!-- 第二列：层级选择器 -->
-        <div class="editor-column hierarchy-selector">
-            <h2>配置层级</h2>
-            <ul id="hierarchy-list">
-                <p class="message">请点击左侧功能按钮加载层级。</p>
-            </ul>
+        <div id="main-editor-container" style="display: none;">
+            
+            <div class="editor-column functional-buttons-column" id="functional-buttons-column">
+                <div class="column-header">文件列表</div>
+                <p class="message" style="padding: 10px; font-size: 0.85rem; color: var(--text-muted);">加载中...</p>
+            </div>
+
+            <div class="editor-column hierarchy-selector">
+                <div class="column-header">配置结构 Key</div>
+                <ul id="hierarchy-list">
+                    <p class="message" style="padding: 10px; font-size: 0.85rem; color: var(--text-muted);">请先选择文件</p>
+                </ul>
+            </div>
+
+            <div class="editor-column fragment-editor">
+                <div class="column-header">
+                    <span>✏️ 片段编辑</span>
+                    <span style="font-size: 0.75rem; font-weight: 400; opacity: 0.7;">(选中左侧 Key 编辑)</span>
+                </div>
+                <textarea id="fragment-content-area" placeholder="// 选择左侧 Key 以编辑局部片段..."></textarea>
+            </div>
+
+            <div class="editor-column full-config-editor">
+                <div class="column-header">
+                    <span>📄 完整文件</span>
+                    <span style="font-size: 0.75rem; font-weight: 400; opacity: 0.7;">(最终合并结果)</span>
+                </div>
+                <textarea id="full-config-content-area" placeholder="// 选择文件查看完整内容..."></textarea>
+            </div>
         </div>
 
-        <!-- 第三列：片段编辑器 -->
-        <div class="editor-column fragment-editor">
-            <h2>片段编辑器</h2>
-            <textarea id="fragment-content-area" placeholder="请从左侧选择一个配置层级以编辑其片段内容..."></textarea>
+        <div id="global-action-buttons" style="display: none;">
+            <button id="save-config-button" class="btn-primary" disabled>
+                <span>💾</span> 保存配置 & 检查
+            </button>
+            <button id="restart-service-button" class="btn-warning" disabled>
+                <span>🔄</span> 重启服务
+            </button>
         </div>
-
-        <!-- 第四列：完整配置编辑器 -->
-        <div class="editor-column full-config-editor">
-            <h2>完整配置编辑器</h2>
-            <textarea id="full-config-content-area" placeholder="请从左侧功能按钮选择一个文件以查看其完整内容..."></textarea>
-        </div>
-    </div>
-
-    <!-- 全局保存和重启按钮容器，放在三列之外 -->
-    <div id="global-action-buttons" style="display: none;">
-        <button id="save-config-button" disabled>仅保存配置</button>
-        <button id="save-and-restart-button" disabled>保存并重启 Sing-box</button>
-    </div>
-
-    <div class="footer">
-        <hr>
-        <p>Go Web 服务正在运行。</p>
     </div>
 
     <script>
+        // --- 1. 主题切换逻辑 ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const body = document.body;
+        
+        // 检查本地存储的主题
+        const savedTheme = localStorage.getItem('singbox-theme');
+        if (savedTheme) {
+            body.setAttribute('data-theme', savedTheme);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            body.setAttribute('data-theme', 'dark'); // 默认跟随系统
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('singbox-theme', newTheme);
+        });
+
+        // --- 2. 原有的业务逻辑 (已包含之前的修复) ---
+        
         // DOM 元素引用
         const toastNotification = document.getElementById('toast-notification');
         const notificationModal = document.getElementById('notification-modal');
@@ -557,7 +577,7 @@
         
         const globalActionButtons = document.getElementById('global-action-buttons');
         const saveConfigButton = document.getElementById('save-config-button');
-        const saveAndRestartButton = document.getElementById('save-and-restart-button');
+        const restartServiceButton = document.getElementById('restart-service-button');
 
         // 状态变量
         let currentFilename = '';
@@ -566,6 +586,9 @@
         let activeTopButton = null;
         let activeHierarchyItem = null;
         let currentActiveConfigPath = '';
+        
+        // 核心变量：记录用户最后操作的是哪个编辑器
+        let lastActiveEditor = 'full'; // 'fragment' 或 'full'
 
         // 辅助函数：显示自动消失的提示框 (Toast)
         function showToast(message, type = 'info', duration = 3000) {
@@ -581,8 +604,13 @@
         function showModal(title, message, type = 'info') {
             modalTitle.textContent = title;
             modalMessage.textContent = message;
-            modalTitle.className = type; // 用于设置标题颜色
-            modalMessage.className = type; // 用于设置消息颜色
+            modalTitle.className = type; 
+            if(type === 'error') {
+                modalMessage.style.color = 'var(--danger-color)';
+            } else {
+                modalMessage.style.color = 'var(--text-main)';
+            }
+            
             notificationModal.classList.add('show');
 
             return new Promise(resolve => {
@@ -599,7 +627,7 @@
 
         // 辅助函数：显示提示信息在指定元素
         function showMessage(element, message, type = 'info') {
-            element.innerHTML = `<p class="message ${type}">${message}</p>`;
+            element.innerHTML = `<p class="message ${type}" style="padding:10px; color:var(--text-muted); font-size:0.85em;">${message}</p>`;
         }
         function clearMessage(element) {
             element.innerHTML = '';
@@ -615,20 +643,15 @@
             }
         }
 
-        // ---------- API 调用函数 (与 Go 后端保持一致) ----------
-        // 这些函数与上一个版本 main.go 提供的完全相同，为了简洁，这里只粘贴一份，请确保与 Go 后端代码一致
+        // ---------- API 调用函数 ----------
         async function fetchConfigPaths() {
             try {
                 const response = await fetch('/api/get_config_paths');
-                if (!response.ok) {
-                    const errorJson = await response.json();
-                    throw new Error(`获取配置路径失败: ${errorJson.error || response.statusText}`);
-                }
+                if (!response.ok) throw new Error(response.statusText);
                 return await response.json();
             } catch (error) {
-                console.error('API /api/get_config_paths 失败:', error);
-                configPathMessage.textContent = `获取可用配置路径失败: ${error.message}`;
-                return { found_paths: [], systemd_default: '', current_active_path: '' };
+                configPathMessage.textContent = `获取路径失败: ${error.message}`;
+                return { found_paths: [] };
             }
         }
 
@@ -639,16 +662,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ path: path })
                 });
-
-                const result = await response.json();
-                if (response.ok) {
-                    return true;
-                } else {
-                    throw new Error(result.message || result.error || '未知错误');
-                }
+                return response.ok;
             } catch (error) {
-                console.error('API /api/set_active_config_path 失败:', error);
-                configPathMessage.textContent = `设置路径失败: ${error.message}`;
                 return false;
             }
         }
@@ -656,29 +671,19 @@
         async function fetchFunctionalConfigs() {
             try {
                 const response = await fetch('/api/get_functional_configs');
-                if (!response.ok) {
-                    const errorJson = await response.json();
-                    throw new Error(`获取功能配置失败: ${errorJson.error || response.statusText}`);
-                }
+                if (!response.ok) throw new Error(response.statusText);
                 return await response.json();
             } catch (error) {
-                console.error('API /api/get_functional_configs 失败:', error);
-                showToast(`加载功能配置失败: ${error.message}\n请检查配置目录是否正确且可读。`, 'error');
-                return { ordered_functional_config: [], config_files: [], active_config_path: '' };
+                return { ordered_functional_config: [] };
             }
         }
 
         async function fetchTopKeys(filename) {
             try {
                 const response = await fetch(`/api/get_top_keys?filename=${encodeURIComponent(filename)}`);
-                if (!response.ok) {
-                    const errorJson = await response.json();
-                    throw new Error(`获取顶层键失败: ${errorJson.error || response.statusText}`);
-                }
+                if (!response.ok) throw new Error(response.statusText);
                 return await response.json();
             } catch (error) {
-                console.error('API /api/get_top_keys 失败:', error);
-                showToast(`获取文件 '${filename}' 的顶层键失败: ${error.message}`, 'error');
                 return { Keys: [] };
             }
         }
@@ -686,43 +691,31 @@
         async function fetchFileContent(filename, path = '') {
             try {
                 let url = `/api/get_content?filename=${encodeURIComponent(filename)}`;
-                if (path) {
-                    url += `&path=${encodeURIComponent(path)}`;
-                }
+                if (path) url += `&path=${encodeURIComponent(path)}`;
                 const response = await fetch(url);
-                if (!response.ok) {
-                    const errorJson = await response.json();
-                    throw new Error(`获取文件内容失败: ${errorJson.error || response.statusText}`);
-                }
+                if (!response.ok) throw new Error(response.statusText);
                 return await response.text();
             } catch (error) {
-                console.error('API /api/get_content 失败:', error);
-                showToast(`获取文件 '${filename}' (路径: ${path}) 内容失败: ${error.message}`, 'error');
+                showToast(`获取内容失败: ${error.message}`, 'error');
                 return '';
             }
         }
 
-        async function saveFileContent(filename, content, path = '') {
+        async function performSave(filename, content, path = '') {
             try {
                 const response = await fetch('/api/save_content', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ filename, content, path })
                 });
-
                 const result = await response.json();
                 if (response.ok) {
-                    showToast(`成功: ${result.message}`, 'success');
-                    return true;
+                    return { success: true, message: result.message };
                 } else {
-                    showToast(`保存失败: ${result.message || result.error || '未知错误'}`, 'error');
-                    console.error('API /api/save_content 失败:', result);
-                    return false;
+                    return { success: false, message: result.message || '保存失败' };
                 }
             } catch (error) {
-                showToast('网络错误或服务器无响应，保存失败。', 'error');
-                console.error('API /api/save_content 网络请求失败:', error);
-                return false;
+                return { success: false, message: '网络请求失败' };
             }
         }
 
@@ -730,13 +723,10 @@
             try {
                 const response = await fetch('/api/restart_singbox', { method: 'POST' });
                 const result = await response.json();
-                if (!response.ok) {
-                    throw new Error(result.message || result.error || response.statusText);
-                }
+                if (!response.ok) throw new Error(result.message || response.statusText);
                 return { success: true, message: result.message };
             } catch (error) {
-                console.error('API /api/restart_singbox 失败:', error);
-                return { success: false, message: error.message || '网络错误或服务器无响应。' };
+                return { success: false, message: error.message };
             }
         }
 
@@ -744,120 +734,25 @@
             try {
                 const response = await fetch('/api/check_config', { method: 'POST' });
                 const result = await response.json();
-                if (!response.ok) {
-                    // 后端在检查失败时也会返回 200 OK，但 status 为 error
-                    // 所以这里主要处理网络错误或非JSON响应
-                    throw new Error(result.message || result.error || response.statusText);
-                }
-                return result; // { status: "success" | "error", message: "..." }
+                if (!response.ok) throw new Error(result.message || response.statusText);
+                return result; 
             } catch (error) {
-                console.error('API /api/check_config 失败:', error);
-                return { status: "error", message: `配置检查请求失败: ${error.message || '网络错误或服务器无响应。'}` };
+                return { status: "error", message: error.message };
             }
         }
-        // --------------------------------------------------------------------------------------
 
-
-        // ---------- UI 宽度计算函数 ----------
+        // ---------- UI 逻辑 ----------
+        
         function calculateFunctionalButtonWidth(buttonsData) {
-            if (!buttonsData || buttonsData.length === 0) {
-                functionalButtonsColumn.style.width = `var(--func-button-min-width)`;
-                return;
-            }
-
-            // 在移动端 (max-width: 899px)，功能按钮是横向排列的，不需要计算固定宽度
-            if (window.matchMedia('(max-width: 899px)').matches) {
-                 functionalButtonsColumn.style.width = '100%';
-                 return;
-            }
-
-            let maxWidth = 0;
-            const tempSpan = document.createElement('span');
-            tempSpan.style.visibility = 'hidden';
-            tempSpan.style.position = 'absolute';
-            tempSpan.style.whiteSpace = 'normal'; // 允许换行来测量
-            tempSpan.style.wordBreak = 'break-all';
-            tempSpan.style.fontFamily = 'Arial, sans-serif';
-            tempSpan.style.fontSize = '0.95rem';
-            // 复制按钮的padding和box-sizing
-            tempSpan.style.padding = '10px 15px';
-            tempSpan.style.boxSizing = 'border-box';
-            // 设置一个最大宽度，模拟6个字符换行
-            const charWidthEstimate = 9; // 估算一个字符的宽度
-            const maxCharsBeforeBreak = 6;
-            tempSpan.style.maxWidth = `${maxCharsBeforeBreak * charWidthEstimate + 15 * 2}px`; // 6字符 + padding
-
-            document.body.appendChild(tempSpan);
-
-            buttonsData.forEach(config => {
-                tempSpan.textContent = config.FunctionName;
-                // 计算出实际渲染的宽度
-                maxWidth = Math.max(maxWidth, tempSpan.offsetWidth);
-            });
-
-            document.body.removeChild(tempSpan);
-
-            // 最终宽度至少为最小宽度
-            const finalWidth = Math.max(maxWidth, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--func-button-min-width')));
-
-            functionalButtonsColumn.style.width = `${finalWidth}px`;
+            // CSS 已经处理了宽度，这里留空以保持兼容性
         }
 
         function calculateHierarchyColumnWidth(itemsData) {
-            if (!itemsData || itemsData.length === 0) {
-                hierarchySelectorColumn.style.flexBasis = 'auto';
-                hierarchySelectorColumn.style.maxWidth = `calc(100% * var(--hierarchy-max-width-ratio))`;
-                return;
-            }
-
-            // 在移动端，层级选择器宽度是100%
-            if (window.matchMedia('(max-width: 899px)').matches) {
-                hierarchySelectorColumn.style.flexBasis = '100%';
-                hierarchySelectorColumn.style.maxWidth = '100%';
-                return;
-            }
-
-            let maxWidth = 0;
-            const tempSpan = document.createElement('span');
-            tempSpan.style.visibility = 'hidden';
-            tempSpan.style.position = 'absolute';
-            tempSpan.style.whiteSpace = 'normal'; // 允许换行
-            tempSpan.style.wordBreak = 'break-all';
-            tempSpan.style.fontFamily = 'Courier New, monospace';
-            tempSpan.style.fontSize = '0.9em';
-            // 复制列表项的padding和box-sizing
-            tempSpan.style.padding = '8px 10px';
-            tempSpan.style.boxSizing = 'border-box';
-            
-            document.body.appendChild(tempSpan);
-
-            itemsData.forEach(key => {
-                tempSpan.textContent = key;
-                maxWidth = Math.max(maxWidth, tempSpan.offsetWidth);
-            });
-
-            document.body.removeChild(tempSpan);
-
-            const columnPadding = parseFloat(getComputedStyle(hierarchySelectorColumn).paddingLeft) + parseFloat(getComputedStyle(hierarchySelectorColumn).paddingRight);
-            const calculatedWidth = maxWidth + columnPadding + 20; // 额外增加20px余量
-            
-            // 获取 mainEditorContainer 的动态宽度
-            const mainEditorContainerWidth = mainEditorContainer.offsetWidth;
-            const maxWidthLimit = mainEditorContainerWidth * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hierarchy-max-width-ratio'));
-
-            hierarchySelectorColumn.style.flexGrow = '0';
-            hierarchySelectorColumn.style.flexBasis = `${Math.min(calculatedWidth, maxWidthLimit)}px`;
-            hierarchySelectorColumn.style.maxWidth = `${maxWidthLimit}px`;
+            // CSS 已经处理了宽度
         }
 
-
-        // ---------- UI 更新函数 ----------
-
-        // 高亮顶部功能按钮
         function highlightTopButton(button) {
-            if (activeTopButton) {
-                activeTopButton.classList.remove('active');
-            }
+            if (activeTopButton) activeTopButton.classList.remove('active');
             if (button) {
                 button.classList.add('active');
                 activeTopButton = button;
@@ -866,11 +761,8 @@
             }
         }
 
-        // 高亮层级列表项
         function highlightHierarchyItem(item) {
-            if (activeHierarchyItem) {
-                activeHierarchyItem.classList.remove('active');
-            }
+            if (activeHierarchyItem) activeHierarchyItem.classList.remove('active');
             if (item) {
                 item.classList.add('active');
                 activeHierarchyItem = item;
@@ -879,122 +771,58 @@
             }
         }
 
-        // 禁用/启用保存按钮
         function setSaveButtonsState(enabled) {
             saveConfigButton.disabled = !enabled;
-            saveAndRestartButton.disabled = !enabled;
+            restartServiceButton.disabled = !enabled;
         }
 
-        // ---------- 事件处理函数 ----------
+        // ---------- 事件处理 ----------
 
-        // 加载配置路径选择器界面
         async function loadConfigPathSelector() {
-            console.log('loadConfigPathSelector() called');
             configPathSelectorContainer.style.display = 'flex';
             mainEditorContainer.style.display = 'none';
             globalActionButtons.style.display = 'none';
-            setPathButton.disabled = true;
-            configPathSelect.innerHTML = '<option value="" disabled selected>-- 正在加载可用路径 --</option>';
-
-            console.log('Calling fetchConfigPaths...');
+            
             const pathResponse = await fetchConfigPaths();
-            console.log('fetchConfigPaths response:', pathResponse);
             const foundPaths = pathResponse.found_paths || [];
-            const systemdDefault = pathResponse.systemd_default || '';
             currentActiveConfigPath = pathResponse.current_active_path || '';
 
-            console.log('Found paths:', foundPaths);
-            console.log('Systemd default:', systemdDefault);
-            console.log('Current active path:', currentActiveConfigPath);
-
-            configPathSelect.innerHTML = '<option value="" disabled selected>-- 请选择一个路径 --</option>';
-            if (foundPaths.length === 0) {
-                configPathMessage.textContent = '未检测到任何可用的 Sing-box 配置目录。请手动输入。';
-                setPathButton.disabled = false;
-            } else {
-                foundPaths.forEach(path => {
-                    const option = document.createElement('option');
-                    option.value = path;
-                    option.textContent = path;
-                    configPathSelect.appendChild(option);
-                });
-                configPathSelect.disabled = false;
-                setPathButton.disabled = false;
-            }
-
-            if (systemdDefault && foundPaths.includes(systemdDefault)) {
-                manualPathInput.value = systemdDefault;
-            }
-
-            currentActivePathDisplay.textContent = currentActiveConfigPath || '未设置';
+            configPathSelect.innerHTML = '<option value="" disabled selected>-- 请选择路径 --</option>';
+            foundPaths.forEach(path => {
+                const option = document.createElement('option');
+                option.value = path;
+                option.textContent = path;
+                configPathSelect.appendChild(option);
+            });
 
             if (currentActiveConfigPath) {
-                configPathMessage.textContent = `已自动设置配置目录为：${currentActiveConfigPath}`;
                 await loadEditorUI();
-            } else if (foundPaths.length === 1 && !systemdDefault) {
-                configPathSelect.value = foundPaths[0];
-                manualPathInput.value = foundPaths[0];
-                configPathMessage.textContent = `检测到唯一路径，尝试自动设置：${foundPaths[0]}`;
-                const success = await setActiveConfigPath(foundPaths[0]);
-                if (success) {
-                    currentActiveConfigPath = foundPaths[0];
-                    currentActivePathDisplay.textContent = currentActiveConfigPath;
-                    await loadEditorUI();
-                }
-            } else {
-                configPathMessage.textContent = '请选择或手动输入 Sing-box 配置目录。';
             }
         }
 
-        // 处理设置路径按钮点击
         async function handleSetConfigPathClick() {
-            console.log('handleSetConfigPathClick() called');
-            clearMessage(configPathMessage);
-            let selectedPath = configPathSelect.value;
-            if (!selectedPath) {
-                selectedPath = manualPathInput.value.trim();
-            }
-
-            if (!selectedPath) {
-                configPathMessage.textContent = '请选择或输入一个有效的配置目录路径。';
-                return;
-            }
-
+            let selectedPath = configPathSelect.value || manualPathInput.value.trim();
+            if (!selectedPath) return;
             const success = await setActiveConfigPath(selectedPath);
             if (success) {
                 currentActiveConfigPath = selectedPath;
-                currentActivePathDisplay.textContent = currentActiveConfigPath;
                 await loadEditorUI();
             }
         }
 
-        // 加载编辑器UI (功能按钮, 清空编辑器)
         async function loadEditorUI() {
-            console.log('loadEditorUI() called');
             configPathSelectorContainer.style.display = 'none';
             mainEditorContainer.style.display = 'flex';
             globalActionButtons.style.display = 'flex';
+            
+            // 默认设置为全文件模式
+            lastActiveEditor = 'full';
 
-            functionalButtonsColumn.innerHTML = '<p class="message">正在加载功能配置...</p>';
-            hierarchyList.innerHTML = '<p class="message">请点击左侧功能按钮加载层级。</p>';
-            fragmentContentArea.value = '';
-            fragmentContentArea.placeholder = '请从左侧选择一个配置层级以编辑其片段内容...';
-            fullConfigContentArea.value = '';
-            fullConfigContentArea.placeholder = '请从左侧功能按钮选择一个文件以查看其完整内容...';
-
-            setSaveButtonsState(false);
-            highlightTopButton(null);
-            highlightHierarchyItem(null);
-
-            console.log('Calling fetchFunctionalConfigs...');
             const funcConfigResponse = await fetchFunctionalConfigs();
-            console.log('fetchFunctionalConfigs response:', funcConfigResponse);
             const orderedFunctionalConfig = funcConfigResponse.ordered_functional_config || [];
 
+            functionalButtonsColumn.innerHTML = '<div class="column-header">文件列表</div>'; // Reset with header
             if (orderedFunctionalConfig.length > 0) {
-                functionalButtonsColumn.innerHTML = '';
-                calculateFunctionalButtonWidth(orderedFunctionalConfig); // 计算并设置宽度
-
                 orderedFunctionalConfig.forEach(config => {
                     const button = document.createElement('button');
                     button.classList.add('config-type-button');
@@ -1003,303 +831,178 @@
                     functionalButtonsColumn.appendChild(button);
                 });
             } else {
-                showMessage(functionalButtonsColumn, '没有识别到任何功能配置文件，请检查配置目录。');
-            }
-
-            if (currentFilename && activeTopButton) {
-                handleFunctionalButtonClick({ target: activeTopButton });
-            } else {
-                 // 如果没有选中文件，清空层级列表的宽度设置
-                hierarchySelectorColumn.style.flexBasis = 'auto';
-                hierarchySelectorColumn.style.maxWidth = `calc(100% * var(--hierarchy-max-width-ratio))`;
+                showMessage(functionalButtonsColumn, '无配置文件');
             }
         }
 
-        // 处理顶部功能按钮点击 (加载文件和顶层键)
         async function handleFunctionalButtonClick(event) {
-            console.log('handleFunctionalButtonClick() called');
             const button = event.target.closest('.config-type-button');
             if (!button) return;
 
-            console.log('Functional button clicked:', button.textContent, 'filename:', button.dataset.filename);
             highlightTopButton(button);
             currentFilename = button.dataset.filename;
-            currentJsonPath = ''; // 确保在选择新文件时清空片段路径
+            currentJsonPath = ''; 
             currentRootContextKey = '';
+            
+            // 切换文件时，重置激活编辑器为 Full
+            lastActiveEditor = 'full';
 
             fragmentContentArea.value = '';
-            fragmentContentArea.placeholder = '请从左侧选择一个配置层级以编辑其片段内容...';
+            fragmentContentArea.placeholder = "← 请点击左侧 Key 编辑片段";
             highlightHierarchyItem(null);
-
-            showMessage(hierarchyList, '正在加载...');
             fullConfigContentArea.value = '正在加载...';
 
-            console.log('Calling fetchTopKeys for filename:', currentFilename);
+            // 1. 获取顶层 Key
             const topKeysResponse = await fetchTopKeys(currentFilename);
-            console.log('fetchTopKeys response:', topKeysResponse);
             currentRootContextKey = topKeysResponse.root_context_key || '';
             const topKeys = topKeysResponse.keys || [];
 
+            hierarchyList.innerHTML = '';
             if (topKeys.length > 0) {
-                hierarchyList.innerHTML = '';
                 topKeys.forEach(key => {
                     const li = document.createElement('li');
                     li.textContent = key;
                     li.dataset.jsonPath = currentRootContextKey ? `${currentRootContextKey}.${key}` : key;
                     hierarchyList.appendChild(li);
                 });
-                calculateHierarchyColumnWidth(topKeys); // 计算并设置层级列表宽度
             } else {
-                showMessage(hierarchyList, `文件 '${currentFilename}' 没有有效的顶层键或不是JSON对象。`);
-                // 如果没有层级，还原层级列宽度设置
-                hierarchySelectorColumn.style.flexBasis = 'auto';
-                hierarchySelectorColumn.style.maxWidth = `calc(100% * var(--hierarchy-max-width-ratio))`;
+                showMessage(hierarchyList, "无顶层 Key");
             }
-
-            console.log('Calling fetchFileContent for filename:', currentFilename);
+            
+            // 2. 获取完整内容
             const fullContent = await fetchFileContent(currentFilename);
-            console.log('fetchFileContent (full) response length:', fullContent.length);
             fullConfigContentArea.value = formatJson(fullContent);
-            fullConfigContentArea.focus();
+            
             setSaveButtonsState(true);
-            saveConfigButton.textContent = '仅保存配置'; // 更新按钮文本
         }
 
-        // 处理第二列层级点击 (加载片段内容)
         async function handleHierarchyItemClick(event) {
-            console.log('handleHierarchyItemClick() called');
             const listItem = event.target.closest('li');
             if (!listItem || !currentFilename) return;
 
-            console.log('Hierarchy item clicked:', listItem.textContent, 'jsonPath:', listItem.dataset.jsonPath);
             highlightHierarchyItem(listItem);
             currentJsonPath = listItem.dataset.jsonPath;
+            
+            // 切换片段时，将激活状态设为 Fragment
+            lastActiveEditor = 'fragment';
 
-            fragmentContentArea.value = '正在加载片段内容...';
-            setSaveButtonsState(false);
-
-            console.log('Calling fetchFileContent for filename:', currentFilename, 'path:', currentJsonPath);
+            fragmentContentArea.value = '加载中...';
             const fragmentContent = await fetchFileContent(currentFilename, currentJsonPath);
-            console.log('fetchFileContent (fragment) response length:', fragmentContent.length);
             fragmentContentArea.value = formatJson(fragmentContent);
-            fragmentContentArea.focus();
-            setSaveButtonsState(true);
-            saveConfigButton.textContent = '保存片段'; // 更新按钮文本
         }
 
-        // 核心保存逻辑
-        // 返回 { success: boolean, message: string }
-        async function performSave(filename, content, path = '') {
-            console.log('performSave() called with filename:', filename, 'path:', path, 'content length:', content.length);
-            if (!filename) {
-                console.error('performSave: filename is empty');
-                return { success: false, message: '请先选择一个文件！' };
-            }
-            if (!content) {
-                return { success: false, message: '内容不能为空！' };
-            }
+        // ---------- 核心逻辑：统一保存入口 (保持你要求的逻辑) ----------
 
-            try {
-                const response = await fetch('/api/save_content', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename, content, path })
-                });
-
-                const result = await response.json();
-                if (response.ok) {
-                    return { success: true, message: result.message };
-                } else {
-                    return { success: false, message: result.message || result.error || '未知错误' };
-                }
-            } catch (error) {
-                console.error('API /api/save_content 网络请求失败:', error);
-                return { success: false, message: '网络错误或服务器无响应，保存失败。' };
-            }
-        }
-
-        // 刷新编辑器内容
-        async function refreshEditorContent(isFullFileSave = false) {
-            if (!currentFilename) return;
-
-            const fullContent = await fetchFileContent(currentFilename);
-            fullConfigContentArea.value = formatJson(fullContent);
-
-            if (isFullFileSave) {
-                // 如果是完整文件保存，重新加载功能按钮和清空片段编辑器
-                await loadEditorUI();
-                if (activeTopButton) {
-                    handleFunctionalButtonClick({ target: activeTopButton });
-                }
-                fragmentContentArea.value = '';
-                fragmentContentArea.placeholder = '请从左侧选择一个配置层级以编辑其片段内容...';
-                highlightHierarchyItem(null);
-            } else if (currentJsonPath) {
-                // 如果是片段保存，只刷新片段编辑器
-                const fragmentContent = await fetchFileContent(currentFilename, currentJsonPath);
-                fragmentContentArea.value = formatJson(fragmentContent);
-            }
-        }
-
-        // 处理“保存片段”按钮点击
-        async function handleSaveFragment() {
-            console.log('handleSaveFragment() called');
-            if (!currentFilename || !currentJsonPath) {
-                showToast('请先选择一个文件和配置片段！', 'error');
-                return;
-            }
-
-            const contentToSave = fragmentContentArea.value;
-            const saveResult = await performSave(currentFilename, contentToSave, currentJsonPath);
-
-            if (saveResult.success) {
-                console.log('Save successful, refreshing editor content...');
-                await refreshEditorContent(false); // 刷新片段和完整文件编辑器
-
-                console.log('Calling checkConfig after fragment save...');
-                const checkResult = await checkConfig();
-                console.log('checkConfig result:', checkResult);
-                if (checkResult.status === "success") {
-                    showToast(`${saveResult.message} 且配置检查成功，无错误！`, 'success'); // 合并成功提示
-                } else {
-                    await showModal('配置检查失败', checkResult.message, 'error');
-                    showToast(`保存成功，但配置检查失败。`, 'error'); // 增加一个 Toast 提示
-                }
-            } else {
-                console.error('Fragment save failed:', saveResult.message);
-                showToast(`保存失败: ${saveResult.message}`, 'error');
-            }
-        }
-
-        // 处理“保存完整文件”按钮点击
-        async function handleSaveFullFile() {
-            console.log('handleSaveFullFile() called');
+        async function handleSaveAndCheck() {
             if (!currentFilename) {
                 showToast('请先选择一个文件！', 'error');
                 return;
             }
 
-            const contentToSave = fullConfigContentArea.value;
-            const saveResult = await performSave(currentFilename, contentToSave);
+            const btn = saveConfigButton;
+            const originalText = btn.innerHTML; // 保留 icon
+            btn.disabled = true;
+            btn.innerHTML = "<span>⏳</span> 正在保存...";
 
-            if (saveResult.success) {
-                console.log('Save successful, refreshing editor content...');
-                await refreshEditorContent(true); // 刷新整个UI
+            let saveResult;
 
-                console.log('Calling checkConfig after full file save...');
+            try {
+                // 1. 执行保存
+                if (lastActiveEditor === 'fragment' && currentJsonPath) {
+                    console.log('Action: Saving Fragment');
+                    const content = fragmentContentArea.value;
+                    saveResult = await performSave(currentFilename, content, currentJsonPath);
+                } else {
+                    console.log('Action: Saving Full File');
+                    const content = fullConfigContentArea.value;
+                    saveResult = await performSave(currentFilename, content);
+                }
+
+                if (!saveResult.success) {
+                    throw new Error(saveResult.message);
+                }
+
+                // 2. 刷新界面
+                const newFullContent = await fetchFileContent(currentFilename);
+                fullConfigContentArea.value = formatJson(newFullContent);
+                
+                if (currentJsonPath) {
+                    const newFragmentContent = await fetchFileContent(currentFilename, currentJsonPath);
+                    fragmentContentArea.value = formatJson(newFragmentContent);
+                }
+
+                showToast('保存成功，正在检查配置...', 'info');
+                btn.innerHTML = "<span>🔍</span> 正在检查...";
+
+                // 3. 执行检查
                 const checkResult = await checkConfig();
-                console.log('checkConfig result:', checkResult);
+
                 if (checkResult.status === "success") {
-                    showToast(`${saveResult.message} 且配置检查成功，无错误！`, 'success'); // 合并成功提示
+                    showToast('✅ 保存成功且配置检查通过！', 'success');
                 } else {
                     await showModal('配置检查失败', checkResult.message, 'error');
-                    showToast(`保存成功，但配置检查失败。`, 'error'); // 增加一个 Toast 提示
                 }
-            } else {
-                console.error('Full file save failed:', saveResult.message);
-                showToast(`保存失败: ${saveResult.message}`, 'error');
+
+            } catch (error) {
+                console.error(error);
+                showToast(`保存失败: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         }
 
-        // 处理“保存并重启 Sing-box”按钮点击
-        async function handleRestartSingbox() {
-            console.log('handleRestartSingbox() called');
-            if (!currentFilename) {
-                showToast('请先选择一个文件进行保存！', 'error');
+        async function handleOnlyRestart() {
+            const btn = restartServiceButton;
+            const originalText = btn.innerHTML;
+            
+            if(!confirm("确认重启 Sing-box 服务吗？\n请确保你已经保存并检查了配置。")) {
                 return;
             }
 
-            // 总是保存当前选中的完整文件内容
-            const contentToSave = fullConfigContentArea.value;
-            console.log('Calling performSave for full file before restart...');
-            const saveResult = await performSave(currentFilename, contentToSave);
-            console.log('performSave result before restart:', saveResult);
+            btn.disabled = true;
+            btn.innerHTML = "<span>⏳</span> 正在重启...";
 
-            if (saveResult.success) {
-                showToast('配置保存成功，正在检查...', 'info');
-                await refreshEditorContent(true); // 刷新整个UI
-
-                console.log('Calling checkConfig before restart...');
-                const checkResult = await checkConfig();
-                console.log('checkConfig result before restart:', checkResult);
-                if (checkResult.status === "success") {
-                    showToast('配置检查成功，正在重启 Sing-box...', 'info');
-                    console.log('Calling restartSingboxService...');
-                    const restartResult = await restartSingboxService();
-                    console.log('restartSingboxService result:', restartResult);
-                    if (restartResult.success) {
-                        showToast(`${saveResult.message}、检查无误并已重启 Sing-box！`, 'success'); // 合并最终成功提示
-                    } else {
-                        showToast(`重启失败: ${restartResult.message}`, 'error');
-                    }
+            try {
+                const result = await restartSingboxService();
+                if (result.success) {
+                    showToast('✅ 服务已发送重启命令！', 'success');
                 } else {
-                    await showModal('配置检查失败', checkResult.message, 'error');
-                    showToast('配置检查失败，未执行重启操作。', 'error');
+                    throw new Error(result.message);
                 }
-            } else {
-                console.error('Save failed before restart:', saveResult.message);
-                showToast(`保存失败: ${saveResult.message}，未执行检查和重启操作。`, 'error');
+            } catch (error) {
+                showToast(`重启失败: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         }
 
-
-        // ---------- 初始化 ----------
         function init() {
-            console.log('init() called');
-            // 配置路径选择器事件
-            configPathSelect.addEventListener('change', () => {
-                manualPathInput.value = configPathSelect.value;
-                setPathButton.disabled = false;
-                clearMessage(configPathMessage);
-            });
-            manualPathInput.addEventListener('input', () => {
-                setPathButton.disabled = manualPathInput.value.trim() === '';
-                clearMessage(configPathMessage);
-            });
+            // 路径选择器事件
+            configPathSelect.addEventListener('change', () => { manualPathInput.value = configPathSelect.value; setPathButton.disabled = false; });
+            manualPathInput.addEventListener('input', () => { setPathButton.disabled = manualPathInput.value.trim() === ''; });
             setPathButton.addEventListener('click', handleSetConfigPathClick);
 
-            // 编辑器相关事件
+            // 编辑器点击事件
             functionalButtonsColumn.addEventListener('click', handleFunctionalButtonClick);
             hierarchyList.addEventListener('click', handleHierarchyItemClick);
-            
-            // 新增一个函数来处理保存按钮的点击，根据当前状态决定调用哪个保存函数
-            async function handleSaveButtonClick() {
-                console.log('handleSaveButtonClick() called. currentJsonPath:', currentJsonPath);
-                if (currentJsonPath) {
-                    await handleSaveFragment();
-                } else {
-                    await handleSaveFullFile();
-                }
-            }
-            saveConfigButton.addEventListener('click', handleSaveButtonClick);
-            // 将“保存并重启 Sing-box”按钮的点击事件绑定到 handleRestartSingbox
-            saveAndRestartButton.addEventListener('click', handleRestartSingbox);
 
-            // 移除片段编辑器和完整配置编辑器的 blur 事件监听器，保存操作应由按钮明确触发
-            // fragmentContentArea.addEventListener('blur', handleSaveFragment);
-            // fullConfigContentArea.addEventListener('blur', handleSaveFullFile);
+            // 监听输入事件
+            fragmentContentArea.addEventListener('input', () => { lastActiveEditor = 'fragment'; });
+            fragmentContentArea.addEventListener('focus', () => { lastActiveEditor = 'fragment'; });
+            
+            fullConfigContentArea.addEventListener('input', () => { lastActiveEditor = 'full'; });
+            fullConfigContentArea.addEventListener('focus', () => { lastActiveEditor = 'full'; });
+
+            // 绑定新按钮事件
+            saveConfigButton.addEventListener('click', handleSaveAndCheck);
+            restartServiceButton.addEventListener('click', handleOnlyRestart);
 
             setSaveButtonsState(false);
             loadConfigPathSelector();
-
-            // 监听窗口大小变化以重新计算列宽（如果需要响应式调整）
-            window.addEventListener('resize', () => {
-                if (mainEditorContainer.style.display !== 'none' && currentFilename) {
-                    // 只有在编辑器显示时才重新计算
-                    fetchFunctionalConfigs().then(funcConfigResponse => {
-                        calculateFunctionalButtonWidth(funcConfigResponse.ordered_functional_config || []);
-                    });
-                    // 重新计算层级宽度需要知道 topKeys
-                    if (activeTopButton) {
-                        fetchTopKeys(currentFilename).then(topKeysResponse => {
-                            calculateHierarchyColumnWidth(topKeysResponse.keys || []);
-                        });
-                    }
-                }
-            });
         }
 
-        // 页面加载完成时执行初始化
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>

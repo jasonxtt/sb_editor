@@ -31,156 +31,117 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// resolvePath 是一个关键的辅助函数（翻译官）。
-// 它的作用是将前端传来的基于 Tag 的路径（如 "outbounds.绿云"）
-// 转换为 gjson/sjson 能理解的基于索引的路径（如 "outbounds.0"）。
+// resolvePath 辅助函数（翻译官）
 func resolvePath(content []byte, userPath string) string {
-	// 如果路径为空，直接返回
 	if userPath == "" {
 		return ""
 	}
-
-	// 尝试分割路径，例如 "outbounds.绿云" -> ["outbounds", "绿云"]
 	parts := strings.SplitN(userPath, ".", 2)
 	if len(parts) != 2 {
-		// 如果不是 "root.sub" 这种格式（例如只是 "log"），不需要翻译
 		return userPath
 	}
-
 	rootKey := parts[0]
 	tagOrKey := parts[1]
 
-	// 只有当根键是 outbounds 或 inbounds 时，才启动 Tag 翻译逻辑
 	if rootKey == "outbounds" || rootKey == "inbounds" {
-		// 获取对应的数组
 		list := gjson.GetBytes(content, rootKey)
 		if list.IsArray() {
 			realIndex := -1
-			// 遍历数组，寻找 tag 匹配的元素
 			list.ForEach(func(key, value gjson.Result) bool {
-				// 尝试获取该项的 tag
 				if value.Get("tag").String() == tagOrKey {
-					// 找到了！记录索引（key.Int() 就是数组下标）
 					realIndex = int(key.Int())
-					return false // 停止遍历
+					return false
 				}
-				return true // 继续遍历
+				return true
 			})
-
-			// 如果找到了对应的 Tag，返回真实的索引路径，例如 "outbounds.0"
 			if realIndex != -1 {
 				return fmt.Sprintf("%s.%d", rootKey, realIndex)
 			}
 		}
 	}
-
-	// 如果没触发特殊逻辑，或者没找到 Tag，原样返回路径
-	// 这保证了其他普通配置（如 dns.servers）依然正常工作
 	return userPath
 }
 
-// GetTopKeysResponse 定义 /api/get_top_keys 接口的响应结构。
+// GetTopKeysResponse ...
 type GetTopKeysResponse struct {
 	RootContextKey string   `json:"root_context_key,omitempty"`
 	Keys           []string `json:"keys"`
 }
 
-// getTopKeysHandler 处理 /api/get_top_keys 请求。
-// 修改点：现在会优先提取 tag 作为键名显示。
+// getTopKeysHandler ...
 func getTopKeysHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeJSONError(w, "只支持 GET 请求", http.StatusMethodNotAllowed)
 		return
 	}
-
 	filename := r.URL.Query().Get("filename")
 	if filename == "" {
 		writeJSONError(w, "缺少 'filename' 参数", http.StatusBadRequest)
 		return
 	}
-
 	filePath, err := validateFilename(filename)
 	if err != nil {
 		writeJSONError(w, err.Error(), http.StatusForbidden)
 		return
 	}
-
 	contentBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		writeJSONError(w, fmt.Sprintf("无法读取文件 '%s': %v", filename, err), http.StatusInternalServerError)
 		return
 	}
-
 	result := gjson.ParseBytes(contentBytes)
 	if !result.IsObject() {
 		writeJSONError(w, "文件内容不是一个有效的JSON对象。", http.StatusBadRequest)
 		return
 	}
-
 	var topLevelKeys []string
 	result.ForEach(func(key, value gjson.Result) bool {
 		topLevelKeys = append(topLevelKeys, key.Str)
 		return true
 	})
-
 	response := GetTopKeysResponse{
 		RootContextKey: "",
 		Keys:           topLevelKeys,
 	}
-
-	// 智能钻取逻辑：如果只有一个根键（如 outbounds），则显示其内部列表
 	if len(topLevelKeys) == 1 {
 		singleTopKey := topLevelKeys[0]
 		singleTopKeyValue := gjson.GetBytes(contentBytes, singleTopKey)
-
-		// 如果值是数组（outbounds/inbounds）或对象
 		if singleTopKeyValue.IsObject() || singleTopKeyValue.IsArray() {
 			var innerKeys []string
 			singleTopKeyValue.ForEach(func(innerKey, innerValue gjson.Result) bool {
-				// ******* 修改开始：Tag 提取逻辑 *******
-				// 只有在 outbounds 或 inbounds 数组中，才尝试提取 tag
 				if (singleTopKey == "outbounds" || singleTopKey == "inbounds") && singleTopKeyValue.IsArray() {
 					tag := innerValue.Get("tag").String()
 					if tag != "" {
-						// 如果有 tag，就用 tag 做名字（例如 "绿云"）
 						innerKeys = append(innerKeys, tag)
 					} else {
-						// 如果没 tag，还用原来的索引（例如 "0"）
 						innerKeys = append(innerKeys, innerKey.Str)
 					}
 				} else {
-					// 其他情况（如 log, dns），保持原样显示键名
 					innerKeys = append(innerKeys, innerKey.Str)
 				}
-				// ******* 修改结束 *******
 				return true
 			})
 			response.RootContextKey = singleTopKey
 			response.Keys = innerKeys
 		}
 	}
-
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(response)
 }
 
-// getFileContentHandler 处理 /api/get_content 请求。
-// 修改点：增加了 resolvePath 调用。
+// getFileContentHandler ...
 func getFileContentHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeJSONError(w, "只支持 GET 请求", http.StatusMethodNotAllowed)
 		return
 	}
-
 	filename := r.URL.Query().Get("filename")
-	userPath := r.URL.Query().Get("path") // 前端传来的可能是 "outbounds.绿云"
-
+	userPath := r.URL.Query().Get("path")
 	filePath, err := validateFilename(filename)
 	if err != nil {
 		writeJSONError(w, err.Error(), http.StatusForbidden)
 		return
 	}
-
 	contentBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -190,16 +151,11 @@ func getFileContentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
 	var resultString string
 	if userPath != "" {
-		// ******* 修改：翻译路径 *******
-		realPath := resolvePath(contentBytes, userPath) // 翻译为 "outbounds.0"
-		// ******* 结束 *******
-
+		realPath := resolvePath(contentBytes, userPath)
 		value := gjson.GetBytes(contentBytes, realPath)
 		if !value.Exists() {
-			// 如果没找到，可能用户刚修改了 Tag 导致路径变了，尝试直接读，或者报错
 			writeJSONError(w, fmt.Sprintf("路径 '%s' (解析为 '%s') 不存在。", userPath, realPath), http.StatusNotFound)
 			return
 		}
@@ -207,13 +163,12 @@ func getFileContentHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		resultString = string(contentBytes)
 	}
-
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(resultString))
 }
 
-// SaveRequestData 用于解析保存文件API的JSON请求体。
+// SaveRequestData ...
 type SaveRequestData struct {
 	Filename string `json:"filename"`
 	Content  string `json:"content"`
@@ -221,7 +176,7 @@ type SaveRequestData struct {
 }
 
 // saveFileContentHandler 处理 /api/save_content 请求。
-// 修改点：增加了 resolvePath 调用。
+// 修改点：使用 SetRawBytes 彻底绕过标准库 JSON 校验。
 func saveFileContentHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeJSONError(w, "只支持 POST 请求", http.StatusMethodNotAllowed)
@@ -239,6 +194,8 @@ func saveFileContentHandler(w http.ResponseWriter, r *http.Request) {
 	contentToSave := reqData.Content
 	userPath := reqData.Path
 
+	log.Printf("收到来自 %s 的保存文件请求: %s (path: %s)", r.RemoteAddr, filename, userPath)
+
 	filePath, err := validateFilename(filename)
 	if err != nil {
 		writeJSONError(w, err.Error(), http.StatusForbidden)
@@ -254,17 +211,27 @@ func saveFileContentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// ******* 修改：翻译路径 *******
-		// 注意：这里用 originalContentBytes 来定位原来的 Tag 在哪个位置
 		realPath := resolvePath(originalContentBytes, userPath)
-		// ******* 结束 *******
 
 		var updatedContent []byte
-		if gjson.Valid(contentToSave) {
-			updatedContent, err = sjson.SetBytes(originalContentBytes, realPath, json.RawMessage(contentToSave))
+
+		// ****** 终极修正：使用 SetRawBytes ******
+		// 1. 判断是否像是复杂结构（对象或数组）
+		trimmedContent := strings.TrimSpace(contentToSave)
+		isLikeJSON := (strings.HasPrefix(trimmedContent, "{") && strings.HasSuffix(trimmedContent, "}")) ||
+			(strings.HasPrefix(trimmedContent, "[") && strings.HasSuffix(trimmedContent, "]"))
+
+		if isLikeJSON {
+			log.Printf("检测到 JSON 结构，使用 SetRawBytes 强制写入（允许注释）。")
+			// SetRawBytes 不会检查 contentToSave 是否合法，直接插入字节
+			// 这样就完美支持了 /* 注释 */
+			updatedContent, err = sjson.SetRawBytes(originalContentBytes, realPath, []byte(contentToSave))
 		} else {
+			log.Printf("检测到普通字符串，使用 SetBytes 自动转义写入。")
+			// 如果是普通字符串（比如 "debug"），还是用这个，它会自动加引号变成 "debug"
 			updatedContent, err = sjson.SetBytes(originalContentBytes, realPath, contentToSave)
 		}
+		// ****** 修正结束 ******
 
 		if err != nil {
 			log.Printf("路径修改失败: 文件 '%s', 路径 '%s' -> '%s', 错误: %v", filename, userPath, realPath, err)
@@ -272,10 +239,6 @@ func saveFileContentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !gjson.ValidBytes(updatedContent) {
-			writeJSONError(w, "修改后的文件内容不是合法的JSON。", http.StatusBadRequest)
-			return
-		}
 		finalContentBytes = updatedContent
 	}
 
@@ -289,7 +252,7 @@ func saveFileContentHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, "success", "文件保存成功！", http.StatusOK)
 }
 
-// restartSingboxHandler (保持不变)
+// restartSingboxHandler ...
 func restartSingboxHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeJSONError(w, "只支持 POST 请求", http.StatusMethodNotAllowed)
@@ -304,7 +267,7 @@ func restartSingboxHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, "success", "Sing-box 服务已成功重启！", http.StatusOK)
 }
 
-// checkConfigHandler (保持不变)
+// checkConfigHandler ...
 func checkConfigHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeJSONError(w, "只支持 POST 请求", http.StatusMethodNotAllowed)
@@ -330,10 +293,7 @@ func checkConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetConfigPathsResponse ... (后续代码与之前逻辑一致，为节省篇幅只展示改动部分，但建议你复制上述完整代码以防遗漏)
-// getConfigPathsHandler, setActiveConfigPathHandler 保持不变，
-// 但为了保证 api.go 文件的完整性，下面补充剩余部分：
-
+// 补充剩余结构体和函数...
 type GetConfigPathsResponse struct {
 	FoundPaths        []string `json:"found_paths"`
 	SystemdDefault    string   `json:"systemd_default"`
@@ -387,7 +347,6 @@ type FunctionalConfigResponse struct {
 	ActiveConfigPath        string           `json:"active_config_path"`
 }
 
-// getFunctionalConfigsHandler (注意这里包含之前“一对多”的逻辑)
 func getFunctionalConfigsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeJSONError(w, "只支持 GET 请求", http.StatusMethodNotAllowed)
@@ -402,7 +361,7 @@ func getFunctionalConfigsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var configFiles []string
-	tempFunctionalMap := make(map[string][]string) // 支持一对多
+	tempFunctionalMap := make(map[string][]string)
 
 	entries, err := os.ReadDir(baseDir)
 	if err != nil {
