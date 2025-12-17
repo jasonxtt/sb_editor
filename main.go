@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"flag"
 	"fmt"
 	"html/template"
 	"log"
@@ -15,10 +16,13 @@ var staticContent embed.FS
 var templates = template.Must(template.ParseFS(staticContent, "templates/index.html"))
 
 func main() {
+	port := flag.Int("p", 80, "Port to listen on")
+	flag.Parse()
+
 	// 1. 初始化配置路径 (来自 config.go)
 	_, _, _ = initConfigPaths()
 
-	addr := "0.0.0.0:80"
+	addr := fmt.Sprintf("0.0.0.0:%d", *port)
 
 	// 2. 注册路由 (处理函数都在 api.go 中)
 	http.HandleFunc("/", rootHandler)
@@ -34,8 +38,13 @@ func main() {
 	// 3. 打印启动信息
 	fmt.Printf("Go Web 服务器正在监听地址: %s\n", addr)
 	fmt.Println("您可以通过在浏览器中访问以下地址来测试：")
-	fmt.Println("  - 主页: http://localhost/")
-	fmt.Println("  - 获取可用配置路径: http://localhost/api/get_config_paths")
+	if *port == 80 {
+		fmt.Println("  - 主页: http://localhost/")
+		fmt.Println("  - 获取可用配置路径: http://localhost/api/get_config_paths")
+	} else {
+		fmt.Printf("  - 主页: http://localhost:%d/\n", *port)
+		fmt.Printf("  - 获取可用配置路径: http://localhost:%d/api/get_config_paths\n", *port)
+	}
 	fmt.Println("  - 如果在远程服务器上运行，请将 localhost 替换为服务器的IP地址。")
 	fmt.Println("\n***** 注意事项 *****")
 	fmt.Println("1. 端口 80 是特权端口，程序可能需要 root 权限运行。")

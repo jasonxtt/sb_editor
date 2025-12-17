@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sing-box 配置编辑器</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
     <style>
         :root {
             /* 浅色主题变量 */
@@ -16,7 +19,8 @@
             --text-main: #334155;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
-            --primary-color: #4f46e5; /* Indigo */
+            --primary-color: #4f46e5;
+            /* Indigo */
             --primary-hover: #4338ca;
             --danger-color: #ef4444;
             --warning-color: #f59e0b;
@@ -37,12 +41,15 @@
             --border-color: #334155;
             --primary-color: #6366f1;
             --primary-hover: #818cf8;
-            --code-bg: #020617; /* 更深的代码背景 */
+            --code-bg: #020617;
+            /* 更深的代码背景 */
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -53,7 +60,8 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            overflow: hidden; /* 防止整个页面滚动 */
+            overflow: hidden;
+            /* 防止整个页面滚动 */
             transition: background-color 0.3s, color 0.3s;
         }
 
@@ -80,7 +88,7 @@
             align-items: center;
             gap: 10px;
         }
-        
+
         /* 顶部右侧工具栏 */
         .header-actions {
             display: flex;
@@ -107,7 +115,8 @@
             flex-grow: 1;
             padding: 20px;
             gap: 20px;
-            overflow: hidden; /* 内部滚动 */
+            overflow: hidden;
+            /* 内部滚动 */
         }
 
         /* 路径选择器面板 */
@@ -124,8 +133,9 @@
             gap: 15px;
             border: 1px solid var(--border-color);
         }
-        
-        input[type="text"], select {
+
+        input[type="text"],
+        select {
             width: 100%;
             padding: 10px 12px;
             border: 1px solid var(--border-color);
@@ -136,8 +146,9 @@
             outline: none;
             transition: border-color 0.2s;
         }
-        
-        input[type="text"]:focus, select:focus {
+
+        input[type="text"]:focus,
+        select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
         }
@@ -147,7 +158,8 @@
             display: flex;
             gap: 15px;
             flex-grow: 1;
-            min-height: 0; /* 允许 Flex 子项滚动 */
+            min-height: 0;
+            /* 允许 Flex 子项滚动 */
         }
 
         /* 通用列样式 */
@@ -209,11 +221,12 @@
         }
 
         .config-type-button.active {
-            background-color: rgba(99, 102, 241, 0.1); /* Primary color low opacity */
+            background-color: rgba(99, 102, 241, 0.1);
+            /* Primary color low opacity */
             color: var(--primary-color);
             font-weight: 600;
         }
-        
+
         .config-type-button.active::before {
             content: '';
             position: absolute;
@@ -263,12 +276,14 @@
         }
 
         /* 编辑器区域 (Textarea) */
-        .fragment-editor, .full-config-editor {
+        .fragment-editor,
+        .full-config-editor {
             flex-grow: 1;
             flex-basis: 0;
-            min-width: 0; /* 防止内容撑开 */
+            min-width: 0;
+            /* 防止内容撑开 */
         }
-        
+
         textarea {
             width: 100%;
             height: 100%;
@@ -282,27 +297,31 @@
             color: var(--text-main);
             outline: none;
         }
-        
+
         textarea::placeholder {
             color: var(--text-muted);
             opacity: 0.5;
         }
-        
+
         /* 滚动条美化 */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
+
         ::-webkit-scrollbar-track {
             background: transparent;
         }
+
         ::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 4px;
         }
+
         [data-theme="dark"] ::-webkit-scrollbar-thumb {
             background: #475569;
         }
+
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
@@ -316,7 +335,9 @@
             flex-shrink: 0;
         }
 
-        button.btn-primary, button.btn-warning, button.btn-action {
+        button.btn-primary,
+        button.btn-warning,
+        button.btn-action {
             padding: 10px 20px;
             border: none;
             border-radius: 6px;
@@ -328,32 +349,35 @@
             align-items: center;
             gap: 8px;
         }
-        
+
         button.btn-primary {
             background-color: var(--primary-color);
             color: white;
         }
+
         button.btn-primary:hover:not(:disabled) {
             background-color: var(--primary-hover);
             transform: translateY(-1px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        
+
         button.btn-warning {
             background-color: var(--warning-color);
-            color: #1e293b; /* Dark text for contrast */
+            color: #1e293b;
+            /* Dark text for contrast */
         }
+
         button.btn-warning:hover:not(:disabled) {
             filter: brightness(1.1);
             transform: translateY(-1px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         button.btn-action {
             background-color: var(--success-color);
             color: white;
         }
-        
+
         button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
@@ -363,7 +387,8 @@
         /* Toast 提示 */
         .toast-notification {
             position: fixed;
-            top: 80px; /* 改为顶部显示 */
+            top: 80px;
+            /* 改为顶部显示 */
             right: 20px;
             background-color: var(--bg-card);
             color: var(--text-main);
@@ -377,12 +402,19 @@
             transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
             font-weight: 500;
         }
+
         .toast-notification.show {
             opacity: 1;
             transform: translateX(0);
         }
-        .toast-notification.success { border-left-color: var(--success-color); }
-        .toast-notification.error { border-left-color: var(--danger-color); }
+
+        .toast-notification.success {
+            border-left-color: var(--success-color);
+        }
+
+        .toast-notification.error {
+            border-left-color: var(--danger-color);
+        }
 
         /* 模态框美化 */
         .modal {
@@ -398,7 +430,10 @@
             justify-content: center;
             align-items: center;
         }
-        .modal.show { display: flex; }
+
+        .modal.show {
+            display: flex;
+        }
 
         .modal-content {
             background-color: var(--bg-card);
@@ -413,16 +448,42 @@
         }
 
         @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
-        .modal h3 { margin-top: 0; font-size: 1.5rem; }
-        .modal h3.error { color: var(--danger-color); }
-        .modal-actions { margin-top: 25px; text-align: right; }
-        .close-button { float: right; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
-        .close-button:hover { color: var(--text-main); }
-        
+        .modal h3 {
+            margin-top: 0;
+            font-size: 1.5rem;
+        }
+
+        .modal h3.error {
+            color: var(--danger-color);
+        }
+
+        .modal-actions {
+            margin-top: 25px;
+            text-align: right;
+        }
+
+        .close-button {
+            float: right;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .close-button:hover {
+            color: var(--text-main);
+        }
+
         #modal-message {
             white-space: pre-wrap;
             background-color: var(--code-bg);
@@ -437,14 +498,72 @@
 
         /* 移动端适配 */
         @media (max-width: 900px) {
-            #main-editor-container { flex-direction: column; overflow-y: auto; }
-            .functional-buttons-column, .hierarchy-selector { width: 100%; height: auto; max-height: 200px; }
-            .editor-column { height: 300px; flex-shrink: 0; }
-            #global-action-buttons { flex-direction: column; }
-            button { width: 100%; justify-content: center; }
+            body {
+                height: auto;
+                overflow-y: auto;
+            }
+
+            #app-container {
+                height: auto;
+                overflow: visible;
+                padding: 10px;
+            }
+
+            #config-path-selector-container {
+                padding: 20px;
+            }
+
+            #main-editor-container {
+                flex-direction: column;
+                overflow: visible;
+                gap: 10px;
+            }
+
+            .functional-buttons-column,
+            .hierarchy-selector {
+                width: 100%;
+                height: auto;
+                max-height: 200px;
+            }
+
+            /* 移动端文本框字体防缩放 & 允许自适应高度 */
+            input,
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+
+            .editor-column {
+                height: auto;
+                min-height: 500px;
+                /* 增加高度以提供更好的编辑视野 */
+                flex-shrink: 0;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .editor-column textarea {
+                flex-grow: 1;
+                /* 强制文本框填满剩余空间 */
+                height: auto;
+                /* 重置高度，由 flex 控制 */
+            }
+
+            #global-action-buttons {
+                flex-direction: column;
+                padding-bottom: 20px;
+            }
+
+            button {
+                width: 100%;
+                justify-content: center;
+                padding: 12px;
+                /* 更大的点击区域 */
+            }
         }
     </style>
 </head>
+
 <body>
 
     <header>
@@ -468,30 +587,31 @@
     </div>
 
     <div id="app-container">
-        
+
         <div id="config-path-selector-container">
             <h2 style="color: var(--primary-color);">配置目录设置</h2>
             <p style="color: var(--text-muted);">请选择 Sing-box 配置文件所在的文件夹</p>
-            
+
             <select id="config-path-select">
                 <option value="" disabled selected>正在扫描路径...</option>
             </select>
-            
+
             <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
                 <span style="flex-shrink: 0; font-size: 0.9em; color: var(--text-muted);">或手动:</span>
                 <input type="text" id="manual-path-input" placeholder="/etc/sing-box/">
             </div>
 
             <button id="set-path-button" class="btn-primary" style="width: 100%;">确定设置</button>
-            
+
             <div style="font-size: 0.85em; color: var(--text-muted); margin-top: 10px;">
-                当前路径: <span id="current-active-path-display" style="font-family: monospace; color: var(--primary-color);">未设置</span>
+                当前路径: <span id="current-active-path-display"
+                    style="font-family: monospace; color: var(--primary-color);">未设置</span>
             </div>
             <p id="config-path-message" style="color: var(--danger-color); font-size: 0.9em;"></p>
         </div>
 
         <div id="main-editor-container" style="display: none;">
-            
+
             <div class="editor-column functional-buttons-column" id="functional-buttons-column">
                 <div class="column-header">文件列表</div>
                 <p class="message" style="padding: 10px; font-size: 0.85rem; color: var(--text-muted);">加载中...</p>
@@ -535,7 +655,7 @@
         // --- 1. 主题切换逻辑 ---
         const themeToggleBtn = document.getElementById('theme-toggle');
         const body = document.body;
-        
+
         // 检查本地存储的主题
         const savedTheme = localStorage.getItem('singbox-theme');
         if (savedTheme) {
@@ -552,7 +672,7 @@
         });
 
         // --- 2. 原有的业务逻辑 (已包含之前的修复) ---
-        
+
         // DOM 元素引用
         const toastNotification = document.getElementById('toast-notification');
         const notificationModal = document.getElementById('notification-modal');
@@ -560,7 +680,7 @@
         const modalMessage = document.getElementById('modal-message');
         const modalConfirmButton = document.getElementById('modal-confirm-button');
         const closeModalButton = notificationModal.querySelector('.close-button');
-        
+
         const configPathSelectorContainer = document.getElementById('config-path-selector-container');
         const configPathSelect = document.getElementById('config-path-select');
         const manualPathInput = document.getElementById('manual-path-input');
@@ -574,7 +694,7 @@
         const hierarchySelectorColumn = document.querySelector('.hierarchy-selector');
         const fragmentContentArea = document.getElementById('fragment-content-area');
         const fullConfigContentArea = document.getElementById('full-config-content-area');
-        
+
         const globalActionButtons = document.getElementById('global-action-buttons');
         const saveConfigButton = document.getElementById('save-config-button');
         const restartServiceButton = document.getElementById('restart-service-button');
@@ -586,7 +706,7 @@
         let activeTopButton = null;
         let activeHierarchyItem = null;
         let currentActiveConfigPath = '';
-        
+
         // 核心变量：记录用户最后操作的是哪个编辑器
         let lastActiveEditor = 'full'; // 'fragment' 或 'full'
 
@@ -604,13 +724,13 @@
         function showModal(title, message, type = 'info') {
             modalTitle.textContent = title;
             modalMessage.textContent = message;
-            modalTitle.className = type; 
-            if(type === 'error') {
+            modalTitle.className = type;
+            if (type === 'error') {
                 modalMessage.style.color = 'var(--danger-color)';
             } else {
                 modalMessage.style.color = 'var(--text-main)';
             }
-            
+
             notificationModal.classList.add('show');
 
             return new Promise(resolve => {
@@ -735,14 +855,14 @@
                 const response = await fetch('/api/check_config', { method: 'POST' });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.message || response.statusText);
-                return result; 
+                return result;
             } catch (error) {
                 return { status: "error", message: error.message };
             }
         }
 
         // ---------- UI 逻辑 ----------
-        
+
         function calculateFunctionalButtonWidth(buttonsData) {
             // CSS 已经处理了宽度，这里留空以保持兼容性
         }
@@ -782,7 +902,7 @@
             configPathSelectorContainer.style.display = 'flex';
             mainEditorContainer.style.display = 'none';
             globalActionButtons.style.display = 'none';
-            
+
             const pathResponse = await fetchConfigPaths();
             const foundPaths = pathResponse.found_paths || [];
             currentActiveConfigPath = pathResponse.current_active_path || '';
@@ -814,7 +934,7 @@
             configPathSelectorContainer.style.display = 'none';
             mainEditorContainer.style.display = 'flex';
             globalActionButtons.style.display = 'flex';
-            
+
             // 默认设置为全文件模式
             lastActiveEditor = 'full';
 
@@ -841,9 +961,9 @@
 
             highlightTopButton(button);
             currentFilename = button.dataset.filename;
-            currentJsonPath = ''; 
+            currentJsonPath = '';
             currentRootContextKey = '';
-            
+
             // 切换文件时，重置激活编辑器为 Full
             lastActiveEditor = 'full';
 
@@ -868,11 +988,11 @@
             } else {
                 showMessage(hierarchyList, "无顶层 Key");
             }
-            
+
             // 2. 获取完整内容
             const fullContent = await fetchFileContent(currentFilename);
             fullConfigContentArea.value = formatJson(fullContent);
-            
+
             setSaveButtonsState(true);
         }
 
@@ -882,7 +1002,7 @@
 
             highlightHierarchyItem(listItem);
             currentJsonPath = listItem.dataset.jsonPath;
-            
+
             // 切换片段时，将激活状态设为 Fragment
             lastActiveEditor = 'fragment';
 
@@ -925,7 +1045,7 @@
                 // 2. 刷新界面
                 const newFullContent = await fetchFileContent(currentFilename);
                 fullConfigContentArea.value = formatJson(newFullContent);
-                
+
                 if (currentJsonPath) {
                     const newFragmentContent = await fetchFileContent(currentFilename, currentJsonPath);
                     fragmentContentArea.value = formatJson(newFragmentContent);
@@ -955,10 +1075,11 @@
         async function handleOnlyRestart() {
             const btn = restartServiceButton;
             const originalText = btn.innerHTML;
-            
-            if(!confirm("确认重启 Sing-box 服务吗？\n请确保你已经保存并检查了配置。")) {
-                return;
-            }
+
+            // Removed confirmation as requested
+            // if (!confirm("确认重启 Sing-box 服务吗？\n请确保你已经保存并检查了配置。")) {
+            //     return;
+            // }
 
             btn.disabled = true;
             btn.innerHTML = "<span>⏳</span> 正在重启...";
@@ -991,7 +1112,7 @@
             // 监听输入事件
             fragmentContentArea.addEventListener('input', () => { lastActiveEditor = 'fragment'; });
             fragmentContentArea.addEventListener('focus', () => { lastActiveEditor = 'fragment'; });
-            
+
             fullConfigContentArea.addEventListener('input', () => { lastActiveEditor = 'full'; });
             fullConfigContentArea.addEventListener('focus', () => { lastActiveEditor = 'full'; });
 
@@ -1006,4 +1127,5 @@
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
+
 </html>
